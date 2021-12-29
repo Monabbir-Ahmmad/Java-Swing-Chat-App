@@ -2,15 +2,14 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.awt.event.WindowEvent;
 import java.io.*;
-import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 
 public class ChatUI extends JFrame {
     public static final String IP = "localhost";
     public static final int PORT = 1234;
-    private final boolean isHost;
     private final ArrayList<FileReceived> fileReceivedArrayList = new ArrayList<>();
 
     private JPanel mainPanel, chatBox;
@@ -25,13 +24,26 @@ public class ChatUI extends JFrame {
     private boolean isFile;
     private int fileID = 0;
 
-    public ChatUI(String title, boolean isHost) {
+    public ChatUI(String title) {
         setTitle(title);
-        this.isHost = isHost;
 
         initialize();
         initListeners();
+        connectToServer();
         receiveMsg();
+    }
+
+    private void connectToServer() {
+        try {
+            //Connect to the socket. If this is the host, create the server socket
+            socket = new Socket(IP, PORT);
+            dataOutputStream = new DataOutputStream(socket.getOutputStream());
+            dataInputStream = new DataInputStream(socket.getInputStream());
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            closeEverything(socket, dataInputStream, dataOutputStream);
+        }
     }
 
     private void initialize() {
@@ -82,6 +94,18 @@ public class ChatUI extends JFrame {
             }
 
             System.out.println("Error! Server not ready or something went wrong");
+
+            int dialogResult = JOptionPane.showConfirmDialog(
+                    null,
+                    "The server might be down. Try to reconnect?",
+                    "Error",
+                    JOptionPane.YES_NO_OPTION);
+
+            if (dialogResult == JOptionPane.YES_OPTION) {
+                connectToServer();
+            } else {
+                dispatchEvent(new WindowEvent(this, WindowEvent.WINDOW_CLOSING));
+            }
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -242,11 +266,6 @@ public class ChatUI extends JFrame {
     private void receiveMsg() {
         new Thread(() -> {
             try {
-                //Connect to the socket. If this is the host, create the server socket
-                socket = isHost ? new ServerSocket(PORT).accept() : new Socket(IP, PORT);
-                dataOutputStream = new DataOutputStream(socket.getOutputStream());
-                dataInputStream = new DataInputStream(socket.getInputStream());
-
                 //Send username while connecting to the server
                 dataOutputStream.writeInt(getTitle().getBytes().length);
                 dataOutputStream.write(getTitle().getBytes());
