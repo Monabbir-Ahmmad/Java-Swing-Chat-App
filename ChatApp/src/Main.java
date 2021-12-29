@@ -1,18 +1,18 @@
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-
 public class Main {
 
     public static void main(String[] args) {
-        boolean isServer = true;
-
-        ExecutorService executor = Executors.newFixedThreadPool(1);
-        executor.submit(() -> new ChatUI("User 1", isServer));
-        executor.submit(() -> new ChatUI("User 2", !isServer));
-        executor.shutdown();
         try {
-            executor.awaitTermination(10, TimeUnit.SECONDS);
+            Thread thread1 = new Thread(() -> new ChatUI("User 1", false));
+            Thread thread2 = new Thread(() -> new ChatUI("User 2", false));
+            Thread thread3 = new Thread(() -> new ChatUI("User 3", false));
+
+            thread1.start();
+            thread1.join();
+            thread2.start();
+            thread2.join();
+            thread3.start();
+            thread3.join();
+
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
