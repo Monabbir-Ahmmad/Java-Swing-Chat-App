@@ -1,4 +1,5 @@
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
@@ -7,14 +8,14 @@ import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
 
-public class ChatUI extends JFrame {
+public class ChatUI extends JFrame implements Runnable {
     public static final String IP = "localhost";
     public static final int PORT = 1234;
     private final ArrayList<FileReceived> fileReceivedArrayList = new ArrayList<>();
 
     private JPanel mainPanel, chatBox;
-    private JButton btnSendText, btnSendFile;
-    private JTextArea msgBox;
+    private JButton buttonSendText, buttonSendFile;
+    private JTextArea textBox;
     private JScrollPane chatBoxScrollPane;
 
     private Socket socket;
@@ -30,7 +31,39 @@ public class ChatUI extends JFrame {
         initialize();
         initListeners();
         connectToServer();
-        receiveMsg();
+    }
+
+    private void initialize() {
+        setContentPane(mainPanel);
+        setPreferredSize(new Dimension(600, 800));
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        pack();
+        setVisible(true);
+        chatBox.setLayout(new BoxLayout(chatBox, BoxLayout.Y_AXIS));
+    }
+
+    private void initListeners() {
+        buttonSendText.addActionListener(e -> {
+            String text = textBox.getText().trim();
+            if (!text.isBlank()) {
+                sendText(text);
+            }
+        });
+
+        buttonSendFile.addActionListener(e -> {
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Choose a file to send");
+            if (fileChooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
+                int dialogResult = JOptionPane.showConfirmDialog(null, "Are you sure you want to send this file?\n" + fileChooser.getSelectedFile().getName(), "Send file", JOptionPane.YES_NO_OPTION);
+                if (dialogResult == JOptionPane.YES_OPTION) {
+                    if (fileChooser.getSelectedFile().length() > 0)
+                        sendFile(fileChooser.getSelectedFile());
+                    else
+                        JOptionPane.showMessageDialog(null, "Can't send empty file", "Error!!!", JOptionPane.PLAIN_MESSAGE);
+                }
+            }
+        });
+
     }
 
     private void connectToServer() {
@@ -40,45 +73,14 @@ public class ChatUI extends JFrame {
             dataOutputStream = new DataOutputStream(socket.getOutputStream());
             dataInputStream = new DataInputStream(socket.getInputStream());
 
+            //Send username to the server after connecting to the server
+            dataOutputStream.writeInt(getTitle().getBytes().length);
+            dataOutputStream.write(getTitle().getBytes());
+
         } catch (IOException e) {
             e.printStackTrace();
             closeEverything(socket, dataInputStream, dataOutputStream);
         }
-    }
-
-    private void initialize() {
-        setContentPane(mainPanel);
-        setPreferredSize(new Dimension(600, 800));
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        pack();
-        setVisible(true);
-
-        chatBox.setLayout(new BoxLayout(chatBox, BoxLayout.Y_AXIS));
-        chatBox.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        msgBox.grabFocus();
-    }
-
-    private void initListeners() {
-        btnSendText.addActionListener(e -> {
-            String text = msgBox.getText().strip();
-            if (!text.isBlank()) {
-                sendText(text);
-            }
-        });
-
-        btnSendFile.addActionListener(e -> {
-            JFileChooser fileChooser = new JFileChooser();
-            fileChooser.setDialogTitle("Choose a file to send");
-            if (fileChooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
-                int dialogResult = JOptionPane.showConfirmDialog(null,
-                        "Are you sure you want to send this file?\n" + fileChooser.getSelectedFile().getName(),
-                        "Send file", JOptionPane.YES_NO_OPTION);
-                if (dialogResult == JOptionPane.YES_OPTION) {
-                    sendFile(fileChooser.getSelectedFile());
-                }
-            }
-        });
-
     }
 
     private void closeEverything(Socket socket, DataInputStream dataInputStream, DataOutputStream dataOutputStream) {
@@ -95,11 +97,7 @@ public class ChatUI extends JFrame {
 
             System.out.println("Error! Server not ready or something went wrong");
 
-            int dialogResult = JOptionPane.showConfirmDialog(
-                    null,
-                    "The server might be down. Try to reconnect?",
-                    "Error",
-                    JOptionPane.YES_NO_OPTION);
+            int dialogResult = JOptionPane.showConfirmDialog(null, "The server might be down. Try to reconnect?", "Error", JOptionPane.YES_NO_OPTION);
 
             if (dialogResult == JOptionPane.YES_OPTION) {
                 connectToServer();
@@ -114,9 +112,9 @@ public class ChatUI extends JFrame {
     }
 
     private void sendText(String text) {
-        isFile = false;
-
         try {
+            isFile = false;
+
             //Send boolean for file or text. true if file is sent
             dataOutputStream.writeBoolean(isFile);
 
@@ -130,14 +128,14 @@ public class ChatUI extends JFrame {
 
             dataOutputStream.flush();
 
+            createTextLabel(false, "Me", text);
+            textBox.setText("");
+            textBox.grabFocus();
+
         } catch (IOException e) {
             e.printStackTrace();
             closeEverything(socket, dataInputStream, dataOutputStream);
         }
-
-        msgBox.setText("");
-        msgBox.grabFocus();
-        updateUIForText(false, "Me", text);
     }
 
 
@@ -168,7 +166,7 @@ public class ChatUI extends JFrame {
 
             dataOutputStream.flush();
 
-            updateUIForFile(false, "Me", fileName);
+            createFileLabel(false, "Me", fileName);
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -176,45 +174,52 @@ public class ChatUI extends JFrame {
         }
     }
 
-    private void updateUIForText(boolean isReceived, String userName, String text) {
+    private void createTextLabel(boolean isReceived, String userName, String text) {
         text = text.replaceAll("\n", "<br>");
         String msgSender = isReceived ? userName : "Me";
 
-        //Add new msg label to chat box panel
         JLabel label = new JLabel(String.format("<html><b>%s: </b>%s</html>", msgSender, text));
         label.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 20));
-        chatBox.add(label);
-        chatBox.add(Box.createVerticalStrut(20));
-        scrollToNewMsg();
+        label.setBorder(new EmptyBorder(10, 10, 10, 10));
+        addLabelToChatBox(label);
     }
 
-    private void updateUIForFile(boolean isReceived, String userName, String fileName) {
-        fileName = "<u><i>" + fileName + "</i></u>";
+    private void createFileLabel(boolean isReceived, String userName, String fileName) {
         String fileSender = isReceived ? userName : "Me";
 
-        //Add new msg label to chat box panel
-        JLabel label = new JLabel(String.format("<html><b>%s: </b>%s</html>", fileSender, fileName));
+        JLabel label = new JLabel(String.format("<html><b>%s: </b><u><i>%s</i></u></html>", fileSender, fileName));
         label.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 20));
+        label.setBorder(new EmptyBorder(10, 10, 10, 10));
+
         if (isReceived) {
             label.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             label.setName(String.valueOf(fileID));
             label.addMouseListener(getLabelClickListeners());
         }
 
+        addLabelToChatBox(label);
+    }
+
+    //Add new msg label to chat box panel
+    private void addLabelToChatBox(JLabel label) {
         chatBox.add(label);
         chatBox.add(Box.createVerticalStrut(20));
         scrollToNewMsg();
     }
 
+    //Scroll to bottom of the mag list
+    private void scrollToNewMsg() {
+        JScrollBar verticalScrollBar = chatBoxScrollPane.getVerticalScrollBar();
+        SwingUtilities.invokeLater(() -> verticalScrollBar.setValue(verticalScrollBar.getMaximum()));
+        validate();
+    }
+
+    //Mouse listener for label
     private MouseListener getLabelClickListeners() {
         return new MouseListener() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                int dialogResult = JOptionPane.showConfirmDialog(
-                        null,
-                        "Do you want to download this file?",
-                        "Warning",
-                        JOptionPane.YES_NO_OPTION);
+                int dialogResult = JOptionPane.showConfirmDialog(null, "Do you want to download this file?", "Warning", JOptionPane.YES_NO_OPTION);
 
                 if (dialogResult == JOptionPane.YES_OPTION) {
                     JLabel label = (JLabel) e.getSource();
@@ -255,77 +260,56 @@ public class ChatUI extends JFrame {
         };
     }
 
-    //Scroll to bottom of the mag list
-    private void scrollToNewMsg() {
-        JScrollBar verticalScrollBar = chatBoxScrollPane.getVerticalScrollBar();
-        SwingUtilities.invokeLater(() -> verticalScrollBar.setValue(verticalScrollBar.getMaximum()));
-        validate();
-    }
-
     //This receives the massages and this will run on a separate thread because waiting for a msg is a blocking operation
-    private void receiveMsg() {
-        new Thread(() -> {
-            try {
-                //Send username while connecting to the server
-                dataOutputStream.writeInt(getTitle().getBytes().length);
-                dataOutputStream.write(getTitle().getBytes());
+    @Override
+    public void run() {
+        try {
+            //Receive massages while the socket is connected
+            while (socket.isConnected()) {
+                //Receive the boolean for a file. true if file is received
+                isFile = dataInputStream.readBoolean();
 
-                //Receive massages while the socket is connected
-                while (socket.isConnected()) {
-                    try {
-                        //Receive the boolean for a file. true if file is received
-                        isFile = dataInputStream.readBoolean();
+                //Receive the username
+                int userNameByteLen = dataInputStream.readInt();
+                byte[] userNameBytes = new byte[userNameByteLen];
 
-                        //Receive the username
-                        int userNameByteLen = dataInputStream.readInt();
-                        byte[] userNameBytes = new byte[userNameByteLen];
+                if (userNameByteLen > 0) {
+                    dataInputStream.readFully(userNameBytes, 0, userNameByteLen);
 
-                        if (userNameByteLen > 0) {
-                            dataInputStream.readFully(userNameBytes, 0, userNameByteLen);
+                    //Receive the msg
+                    int msgBytesLength = dataInputStream.readInt();
+                    byte[] msgBytes = new byte[msgBytesLength];
 
-                            //Receive the msg
-                            int msgBytesLength = dataInputStream.readInt();
-                            byte[] msgBytes = new byte[msgBytesLength];
+                    if (msgBytesLength > 0) dataInputStream.readFully(msgBytes, 0, msgBytesLength);
 
-                            if (msgBytesLength > 0)
-                                dataInputStream.readFully(msgBytes, 0, msgBytesLength);
+                    //If a file was sent as msg, receive the file content
+                    if (isFile) {
+                        int fileContentLength = dataInputStream.readInt();
+                        if (fileContentLength > 0) {
+                            byte[] fileContentBytes = new byte[fileContentLength];
+                            dataInputStream.readFully(fileContentBytes, 0, fileContentLength);
 
-                            //If a file was sent as msg, receive the file content
-                            if (isFile) {
-                                int fileContentLength = dataInputStream.readInt();
-                                if (fileContentLength > 0) {
-                                    byte[] fileContentBytes = new byte[fileContentLength];
-                                    dataInputStream.readFully(fileContentBytes, 0, fileContentLength);
-
-                                    //Add the received file into the array list
-                                    fileReceivedArrayList.add(new FileReceived(fileID, new String(msgBytes), fileContentBytes));
-                                }
-                            }
-
-                            if (msgBytes != null) {
-                                if (!isFile) {
-                                    //If the msg was a text
-                                    updateUIForText(true, new String(userNameBytes), new String(msgBytes));
-                                } else {
-                                    //If a msg was a file
-                                    updateUIForFile(true, new String(userNameBytes), new String(msgBytes));
-                                    fileID++;
-                                }
-                            }
+                            //Add the received file into the array list
+                            fileReceivedArrayList.add(new FileReceived(fileID, new String(msgBytes), fileContentBytes));
                         }
+                    }
 
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        closeEverything(socket, dataInputStream, dataOutputStream);
-                        break;
+                    if (msgBytes != null) {
+                        if (!isFile) {
+                            //If the msg was a text
+                            createTextLabel(true, new String(userNameBytes), new String(msgBytes));
+                        } else {
+                            //If a msg was a file
+                            createFileLabel(true, new String(userNameBytes), new String(msgBytes));
+                            fileID++;
+                        }
                     }
                 }
-
-            } catch (IOException e) {
-                e.printStackTrace();
-                closeEverything(socket, dataInputStream, dataOutputStream);
             }
-        }).start();
+        } catch (IOException e) {
+            e.printStackTrace();
+            closeEverything(socket, dataInputStream, dataOutputStream);
+        }
     }
 
 }

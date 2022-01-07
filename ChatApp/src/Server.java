@@ -10,16 +10,8 @@ public class Server {
         this.serverSocket = serverSocket;
     }
 
-    public static void main(String[] args) {
-        try {
-            Server server = new Server(new ServerSocket(1234));
-            server.startServer();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
     public void startServer() {
+        System.out.println("Server is running");
         try {
             while (!serverSocket.isClosed()) {
                 Socket socket = serverSocket.accept();
@@ -33,11 +25,13 @@ public class Server {
             }
 
         } catch (IOException e) {
+            e.printStackTrace();
             closeServerSocket();
         }
     }
 
     private void closeServerSocket() {
+        System.out.println("Server is stopped");
         try {
             if (serverSocket != null) {
                 serverSocket.close();
