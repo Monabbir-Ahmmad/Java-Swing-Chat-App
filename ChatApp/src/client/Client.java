@@ -11,7 +11,7 @@ public class Client implements Runnable {
 
     private final String clientName;
 
-    private final ArrayList<FileReceived> fileReceivedArrayList = new ArrayList<>();
+    private final ArrayList<ReceivedFile> receivedFileArrayList = new ArrayList<>();
 
     private Socket socket;
     private DataOutputStream dataOutputStream;
@@ -58,7 +58,7 @@ public class Client implements Runnable {
         //Receive the boolean for a file. true if file is received
         boolean isFile = dataInputStream.readBoolean();
 
-        //Receive the username
+        //Receive the message sender name
         int userNameByteLen = dataInputStream.readInt();
         byte[] userNameBytes = new byte[userNameByteLen];
 
@@ -69,7 +69,8 @@ public class Client implements Runnable {
             int msgBytesLength = dataInputStream.readInt();
             byte[] msgBytes = new byte[msgBytesLength];
 
-            if (msgBytesLength > 0) dataInputStream.readFully(msgBytes, 0, msgBytesLength);
+            if (msgBytesLength > 0)
+                dataInputStream.readFully(msgBytes, 0, msgBytesLength);
 
             //If a file was sent as msg, receive the file content
             if (isFile) {
@@ -79,13 +80,12 @@ public class Client implements Runnable {
                     dataInputStream.readFully(fileContentBytes, 0, fileContentLength);
 
                     //Add the received file into the array list
-                    fileReceivedArrayList.add(new FileReceived(fileID, new String(msgBytes), fileContentBytes));
+                    receivedFileArrayList.add(new ReceivedFile(fileID, new String(msgBytes), fileContentBytes));
                     fileID++;
                 }
             }
 
-            if (msgBytes != null) {
-                //createMessageLabel(true, new String(userNameBytes), new String(msgBytes), isFile);
+            if (messageReceiveListener != null) {
                 messageReceiveListener.onMessageReceive(true, new String(userNameBytes), new String(msgBytes), isFile);
             }
 
@@ -175,7 +175,7 @@ public class Client implements Runnable {
 
             if (dialogResult == JOptionPane.YES_OPTION) {
                 connectToServer();
-            } else {
+            } else if (clientStopListener != null) {
                 clientStopListener.onClientStop();
             }
 
@@ -185,8 +185,8 @@ public class Client implements Runnable {
 
     }
 
-    public ArrayList<FileReceived> getReceivedFileList() {
-        return fileReceivedArrayList;
+    public ArrayList<ReceivedFile> getReceivedFileList() {
+        return receivedFileArrayList;
     }
 
     public void setClientStopListener(ClientStopListener listener) {

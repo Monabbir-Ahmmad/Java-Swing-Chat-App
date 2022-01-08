@@ -1,7 +1,7 @@
 package gui;
 
 import client.Client;
-import client.FileReceived;
+import client.ReceivedFile;
 
 import javax.swing.*;
 import java.awt.*;
@@ -109,12 +109,12 @@ public class ChatUI extends JFrame {
                 if (dialogResult == JOptionPane.YES_OPTION) {
                     JLabel label = (JLabel) e.getSource();
 
-                    for (FileReceived fileReceived : client.getReceivedFileList()) {
-                        if (fileReceived.getId() == Integer.parseInt(label.getName())) {
+                    for (ReceivedFile receivedFile : client.getReceivedFileList()) {
+                        if (receivedFile.getId() == Integer.parseInt(label.getName())) {
                             try {
-                                File file = new File(System.getProperty("user.home") + "/Downloads/" + fileReceived.getName());
+                                File file = new File(System.getProperty("user.home") + "/Downloads/" + receivedFile.getName());
                                 FileOutputStream fileOutputStream = new FileOutputStream(file);
-                                fileOutputStream.write(fileReceived.getData());
+                                fileOutputStream.write(receivedFile.getData());
                                 fileOutputStream.close();
 
                                 JOptionPane.showMessageDialog(null, file, "File downloaded to", JOptionPane.PLAIN_MESSAGE);

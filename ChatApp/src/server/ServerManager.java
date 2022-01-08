@@ -26,15 +26,13 @@ public class ServerManager implements Runnable {
             if (clientNameByteLen > 0) {
                 dataInputStream.readFully(clientNameBytes, 0, clientNameByteLen);
 
-                if (clientNameBytes != null) {
-                    this.clientName = new String(clientNameBytes);
-                    serverManagerList.add(this);
+                this.clientName = new String(clientNameBytes);
+                serverManagerList.add(this);
 
-                    broadcastMsg(false, "SERVER", clientName + " has entered the chat", null);
+                broadcastMsg(false, "SERVER", clientName + " has entered the chat", null);
 
-                    if (serverManagerList.size() > 1)
-                        sendConnectedClients("SERVER");
-                }
+                if (serverManagerList.size() > 1)
+                    sendConnectedClients("SERVER");
             }
 
         } catch (IOException e) {
@@ -94,10 +92,8 @@ public class ServerManager implements Runnable {
                         }
                     }
 
-                    if (msgBytes != null) {
-                        //Broadcast the msg to other clients except the one who sent it
-                        broadcastMsg(isFile, new String(userNameBytes), new String(msgBytes), fileContentBytes);
-                    }
+                    //Broadcast the msg to other clients except the one who sent it
+                    broadcastMsg(isFile, new String(userNameBytes), new String(msgBytes), fileContentBytes);
                 }
 
             } catch (IOException e) {
@@ -140,7 +136,7 @@ public class ServerManager implements Runnable {
     }
 
     //Send the list of connected clients to the client that connected now
-    private void sendConnectedClients(String userName) {
+    private void sendConnectedClients(String senderName) {
         StringBuilder text = new StringBuilder("Clients connected to this server: ");
         for (int i = 0; i < serverManagerList.size(); i++) {
             if (serverManagerList.get(i) != this) {
@@ -155,8 +151,8 @@ public class ServerManager implements Runnable {
             dataOutputStream.writeBoolean(false);
 
             //Send username
-            dataOutputStream.writeInt(userName.getBytes().length);
-            dataOutputStream.write(userName.getBytes());
+            dataOutputStream.writeInt(senderName.getBytes().length);
+            dataOutputStream.write(senderName.getBytes());
 
             //Send text msg
             dataOutputStream.writeInt(text.toString().getBytes().length);

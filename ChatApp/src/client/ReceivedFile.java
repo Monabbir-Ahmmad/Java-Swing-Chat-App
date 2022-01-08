@@ -2,13 +2,13 @@ package client;
 
 import java.util.Arrays;
 
-public class FileReceived {
+public class ReceivedFile {
 
     private int id;
     private String name;
     private byte[] data;
 
-    public FileReceived(int id, String name, byte[] data) {
+    public ReceivedFile(int id, String name, byte[] data) {
         this.id = id;
         this.name = name;
         this.data = data;
@@ -41,7 +41,7 @@ public class FileReceived {
 
     @Override
     public String toString() {
-        return "client.FileReceived{" +
+        return "client.ReceivedFile{" +
                 "id=" + id +
                 ", name='" + name + '\'' +
                 ", data=" + Arrays.toString(data) +
