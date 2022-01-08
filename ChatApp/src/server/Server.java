@@ -1,8 +1,13 @@
+package server;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 
 public class Server {
+
+    public static final int PORT = 1234;
+    public static final String IP = "localhost";
 
     private final ServerSocket serverSocket;
 
@@ -18,9 +23,9 @@ public class Server {
 
                 System.out.println("A new client has connected");
 
-                ClientHandler clientHandler = new ClientHandler(socket);
+                ServerManager serverManager = new ServerManager(socket);
 
-                Thread thread = new Thread(clientHandler);
+                Thread thread = new Thread(serverManager);
                 thread.start();
             }
 

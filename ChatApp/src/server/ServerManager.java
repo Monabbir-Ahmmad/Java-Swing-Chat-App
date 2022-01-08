@@ -1,19 +1,21 @@
+package server;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.ArrayList;
 
-public class ClientHandler implements Runnable {
+public class ServerManager implements Runnable {
 
-    public static ArrayList<ClientHandler> clientHandlerList = new ArrayList<>();
+    public static ArrayList<ServerManager> serverManagerList = new ArrayList<>();
 
     private Socket socket;
     private DataOutputStream dataOutputStream;
     private DataInputStream dataInputStream;
     private String clientName;
 
-    public ClientHandler(Socket socket) {
+    public ServerManager(Socket socket) {
         try {
             this.socket = socket;
             dataOutputStream = new DataOutputStream(socket.getOutputStream());
@@ -26,11 +28,11 @@ public class ClientHandler implements Runnable {
 
                 if (clientNameBytes != null) {
                     this.clientName = new String(clientNameBytes);
-                    clientHandlerList.add(this);
+                    serverManagerList.add(this);
 
                     broadcastMsg(false, "SERVER", clientName + " has entered the chat", null);
 
-                    if (clientHandlerList.size() > 1)
+                    if (serverManagerList.size() > 1)
                         sendConnectedClients("SERVER");
                 }
             }
@@ -109,26 +111,26 @@ public class ClientHandler implements Runnable {
 
     //Broadcast the msg to other clients except the one who sent it
     private void broadcastMsg(boolean isFile, String userName, String text, byte[] fileContentBytes) {
-        for (ClientHandler clientHandler : clientHandlerList) {
+        for (ServerManager serverManager : serverManagerList) {
             try {
-                if (clientHandler != this) {
+                if (serverManager != this) {
                     //Send boolean for file or text. true if file is sent
-                    clientHandler.dataOutputStream.writeBoolean(isFile);
+                    serverManager.dataOutputStream.writeBoolean(isFile);
 
                     //Send username
-                    clientHandler.dataOutputStream.writeInt(userName.getBytes().length);
-                    clientHandler.dataOutputStream.write(userName.getBytes());
+                    serverManager.dataOutputStream.writeInt(userName.getBytes().length);
+                    serverManager.dataOutputStream.write(userName.getBytes());
 
                     //Send text msg for file name
-                    clientHandler.dataOutputStream.writeInt(text.getBytes().length);
-                    clientHandler.dataOutputStream.write(text.getBytes());
+                    serverManager.dataOutputStream.writeInt(text.getBytes().length);
+                    serverManager.dataOutputStream.write(text.getBytes());
 
                     if (isFile) {
                         //Send file content
-                        clientHandler.dataOutputStream.writeInt(fileContentBytes.length);
-                        clientHandler.dataOutputStream.write(fileContentBytes);
+                        serverManager.dataOutputStream.writeInt(fileContentBytes.length);
+                        serverManager.dataOutputStream.write(fileContentBytes);
                     }
-                    clientHandler.dataOutputStream.flush();
+                    serverManager.dataOutputStream.flush();
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -140,11 +142,11 @@ public class ClientHandler implements Runnable {
     //Send the list of connected clients to the client that connected now
     private void sendConnectedClients(String userName) {
         StringBuilder text = new StringBuilder("Clients connected to this server: ");
-        for (int i = 0; i < clientHandlerList.size(); i++) {
-            if (clientHandlerList.get(i) != this) {
+        for (int i = 0; i < serverManagerList.size(); i++) {
+            if (serverManagerList.get(i) != this) {
                 if (i > 0)
                     text.append(", ");
-                text.append(clientHandlerList.get(i).clientName);
+                text.append(serverManagerList.get(i).clientName);
             }
         }
 
@@ -170,6 +172,6 @@ public class ClientHandler implements Runnable {
 
     private void removeClientHandler() {
         System.out.println("A client has left the chat");
-        clientHandlerList.remove(this);
+        serverManagerList.remove(this);
     }
 }
