@@ -146,6 +146,7 @@ public class Client implements Runnable {
             dataOutputStream.write(fileContentBytes);
 
             dataOutputStream.flush();
+            fileInputStream.close();
 
             return true;
 
