@@ -98,7 +98,7 @@ public class ServerManager implements Runnable, IConnection {
     }
 
     //Send the list of connected clients to the client that connected now
-    private void sendConnectedClients(String senderName) {
+    private void sendConnectedClientList(String senderName) {
         StringBuilder text = new StringBuilder("Clients connected to this server: ");
         for (int i = 0; i < serverManagerList.size(); i++) {
             if (serverManagerList.get(i) != this) {
@@ -128,6 +128,31 @@ public class ServerManager implements Runnable, IConnection {
         }
     }
 
+    //This will receive the new client
+    private void receiveNewClient() {
+        try {
+            int clientNameByteLen = dataInputStream.readInt();
+            byte[] clientNameBytes = new byte[clientNameByteLen];
+
+            if (clientNameByteLen > 0) {
+                dataInputStream.readFully(clientNameBytes, 0, clientNameByteLen);
+
+                this.clientName = new String(clientNameBytes);
+                serverManagerList.add(this);
+
+                //Tell other clients that a new client has joined
+                broadcastMsg(false, "SERVER", clientName + " has entered the chat", null);
+
+                //Send the list of connected clients to the newly joined client
+                if (serverManagerList.size() > 1)
+                    sendConnectedClientList("SERVER");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            closeConnection();
+        }
+    }
+
     private void removeClientHandler() {
         System.out.println("A client has left the chat");
         serverManagerList.remove(this);
@@ -139,20 +164,7 @@ public class ServerManager implements Runnable, IConnection {
             dataOutputStream = new DataOutputStream(socket.getOutputStream());
             dataInputStream = new DataInputStream(socket.getInputStream());
 
-            int clientNameByteLen = dataInputStream.readInt();
-            byte[] clientNameBytes = new byte[clientNameByteLen];
-
-            if (clientNameByteLen > 0) {
-                dataInputStream.readFully(clientNameBytes, 0, clientNameByteLen);
-
-                this.clientName = new String(clientNameBytes);
-                serverManagerList.add(this);
-
-                broadcastMsg(false, "SERVER", clientName + " has entered the chat", null);
-
-                if (serverManagerList.size() > 1)
-                    sendConnectedClients("SERVER");
-            }
+            receiveNewClient();
 
         } catch (IOException e) {
             e.printStackTrace();
