@@ -175,15 +175,14 @@ public class ServerManager implements Runnable, IConnection {
     @Override
     public void closeConnection() {
         try {
-            if (socket != null) {
-                socket.close();
-            }
-            if (dataInputStream != null) {
+            if (dataInputStream != null)
                 dataInputStream.close();
-            }
-            if (dataOutputStream != null) {
+
+            if (dataOutputStream != null)
                 dataOutputStream.close();
-            }
+
+            if (socket != null)
+                socket.close();
 
             removeClientHandler();
 
